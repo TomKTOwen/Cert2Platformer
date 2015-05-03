@@ -1,8 +1,28 @@
 var canvas = document.getElementById("gameCanvas");
 var context = canvas.getContext("2d");
 
+//setting up delta time variables
 var startFrameMillis = Date.now();
 var endFrameMillis = Date.now();
+
+var STATE_GAME = 0;
+var STATE_GAMEOVER = 1;
+//var STATE_WIN = 3; /////////////////not sure how to add this is after crossing exit on map
+var STATE_SPLASH = 4;
+
+var gameState = STATE_SPLASH;
+
+var Music = new Howl(
+	{
+		urls:["background.ogg"],
+		loop:true,
+		buffer:true,
+		volume:0.5
+	});
+Music.play();
+
+var SplashBackground = document.createElement("img");
+	SplashBackground.src = "splash_background.png";
 
 // This function will return the time in seconds since the function 
 // was last called
@@ -21,8 +41,8 @@ function getDeltaTime()
 	var deltaTime = (startFrameMillis - endFrameMillis) * 0.001;
 	
 		// validate that the delta is within range
-	if(deltaTime > 1)
-		deltaTime = 1;
+	if(deltaTime > 0.03)
+		deltaTime = 0.03;
 		
 	return deltaTime;
 }
@@ -40,107 +60,112 @@ var fps = 0;
 var fpsCount = 0;
 var fpsTime = 0;
 
-//physics constants/////////////////////////
-	//reference
-var METER = TILE;
-
-var GRAVITY = METER * 9.8 * 6; 
-
-	//Maximum speed our player can go 
-var MAXDX = METER * 10;
-
-var MAXDY = METER * 15;
-
-var ACCEL = MAXDX * 2;
-
-var FRICTION = MAXDX * 6; 
-
-var JUMP = METER * 1500;
-///////////////////////////////////////////
+var LAYER_COUNT = 3;
 
 
+var TILE = 35;
+var TILESET_TILE = 70;
+var TILESET_PADDING = 2;
+var TILESET_SPACING = 2;
+var TILESET_COUNT_X = 14;
+var TILESET_COUNT_Y = 14;
+
+var LAYER_BACKGROUND = 0;
+var LAYER_PLATFORMS = 1;
+var LAYER_LADDERS = 2;
 
 var cells = [];
-function initialize() 
+
+function initializeCollision()
 {
-	for(var layerIndex = 0; layerIndex < LAYER_COUNT; layerIndex++) 
+	//loop through each layer
+	for ( var layerIdx = 0 ; layerIdx < LAYER_COUNT ; ++layerIdx )
 	{
-		cells[layerIndex] = [];
-		var itemIndex = 0;
-		for(var y = 0; y < level1.layers[layerIndex].height; y++) 
+		cells[layerIdx] = [];
+		var index = 0;
+	
+		//loop through each row
+		for ( var y = 0 ; y < level1.layers[layerIdx].height ; ++y)
 		{
-			cells[layerIndex][y] = [];
-			for(var x = 0; x < level1.layers[layerIndex].width; x++) 
+			cells[layerIdx][y] = [];
+		
+			//loop through each cell
+			for ( var x = 0 ; x < level1.layers[layerIdx].width ; ++x)
 			{
-				if(level1.layers[layerIndex].data[itemIndex] != 0) 
+				//if the tile for this cell is not empty
+				if ( level1.layers[layerIdx].data[index] != 0 )
 				{
-					cells[layerIndex][y][x] = 1;
-					cells[layerIndex][y-1][x] = 1;
-					cells[layerIndex][y-1][x+1] = 1;
-					cells[layerIndex][y][x+1] = 1;
+					//set the 4 cells around it to be colliders
+					cells[layerIdx][y][x] = 1;
+					cells[layerIdx][y][x+1] = 1;
+					cells[layerIdx][y-1][x+1] = 1;
+					cells[layerIdx][y-1][x] = 1;
 				}
-				else if(cells[layerIndex][y][x] != 1) 
+				
+				//if the cell hasn't already been set to 1, set it to 0
+				else if (cells[layerIdx][y][x] != 1 )
 				{
-					cells[layerIndex][y][x] = 0;
+					cells[layerIdx][y][x] = 0;
 				}
-				itemIndex++;
+				
+				++index;
 			}
 		}
 	}
 }
 
-function cellAtPixelCoord(layer, x, y)
+function tileToPixel(tile_coord)
 {
-	if(x < 0 || x > SCREEN_WIDTH || y < 0)
-			return 1; 
-	if(y > SCREEN_HEIGHT)
-			return 0;
-	return cellAtTileCoord(layer, pixelToTile(x), pixelToTile(y));
-};
-
-function cellAtTileCoord(layer, tx, ty)
-{
-	if(tx < 0 || tx >= MAP.tw || ty < 0)
-			return 1;
-	
-	if(ty >= MAP.th)
-		return 0;
-	return cells[layer][tx][ty];
-};
-
-function tileToPixel(tile)
-{
-	return tile * TILE;
-};
+	return tile_coord * TILE;
+}
 
 function pixelToTile(pixel)
 {
-	return Math.floor(pixel/TILE);
-};
+	return Math.floor(pixel / TILE);
+}
 
-function bound(value, min, max)
+
+function cellAtTileCoord(layer, tx, ty)
 {
-	if(value < min)
-		return min;
-	if(value > max)
-		return max;
-	return value;
-};
+	//if off the top, left or right of the map
+	if ( tx < 0 || tx > MAP.tw || ty < 0 )
+	{
+		return 1;
+	}
+	
+	//if off the bottom of the map
+	if ( ty >= MAP.th )
+	{
+		return 0;
+	}
+	
+	return cells[layer][ty][tx];
+}
+
+function cellAtPixelCoord(layer, x, y)
+{
+	var tx = pixelToTile(x);
+	var ty = pixelToTile(y);
+	
+	return cellAtTileCoord(layer, tx, ty);
+}
+
+
 
 var keyboard = new Keyboard();
 var player = new Player();
 
-
-
-function run()
+function runGame(deltaTime)
 {
-	context.fillStyle = "#ccc";		
+	
+	context.fillStyle = "#8ebbeb";		
 	context.fillRect(0, 0, canvas.width, canvas.height);
 	
-	var deltaTime = getDeltaTime();
+	
+	drawMap();
 	
 	player.update(deltaTime);
-	player.draw(context);	
+	player.draw();
 	
 	// update the frame counter 
 	fpsTime += deltaTime;
@@ -151,16 +176,90 @@ function run()
 		fps = fpsCount;
 		fpsCount = 0;
 	}		
-	
-	drawMap();
 		
 	// draw the FPS
 	context.fillStyle = "#f00";
 	context.font="14px Arial";
 	context.fillText("FPS: " + fps, 5, 20, 100);
+	
+	
+	
+	if (Player.deathCount == 2)
+	{
+		gameState = STATE_GAMEOVER;
+		return;
+	}
+	
+	if (Player.health == 3)
+	{
+		gameState = STATE_GAMEOVER;
+		return;
+	}
 }
 
-initialize();
+function runGameOver(deltaTime)
+{
+	Music.stop();
+	
+	context.fillStyle = "#000";		
+	context.fillRect(0, 0, canvas.width, canvas.height);
+	
+	context.fillStyle = "#f00";
+	context.font="100px Arial";
+	context.fillText("...You failed...", 300, 400);
+	
+}
+
+function runWin(deltaTime)
+{
+	Music.stop();
+	
+	context.fillStyle = "#8ebbeb"
+	context.fillRect(0,0, canvas.width, canvas.height);
+	
+	context.fillStyle = "#66ba5a";
+	context.font="100px Arial";
+	context.fillText("Success", 300, 400);
+}
+
+var splashTimer = 3;
+function runSplash(deltaTime)
+{
+		splashTimer -= deltaTime;
+	if(splashTimer <= 0)
+	{
+		gameState = STATE_GAME;
+		return;
+	}
+	
+	context.fillStyle = "#AAE31A"
+	context.fillRect(0,0, canvas.width, canvas.height);
+	context.drawImage( SplashBackground, 0, 0);
+	
+	}
+
+
+
+function run()
+{
+	
+	var deltaTime = getDeltaTime();
+	
+	switch(gameState)
+	{
+		case STATE_GAME:
+			runGame(deltaTime);
+			break;
+		case STATE_GAMEOVER:
+			runGameOver(deltaTime);
+			break;
+		case STATE_SPLASH:
+			runSplash(deltaTime);
+	}
+}
+
+
+initializeCollision();
 
 //-------------------- Don't modify anything below here
 
