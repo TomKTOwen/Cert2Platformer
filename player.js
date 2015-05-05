@@ -180,7 +180,7 @@ Player.prototype.update = function(deltaTime)
 	{
 		if ((cell && !celldown) || (cellright && !celldiag && nx))
 		{
-			this.postion.y = tileToPixel(ty + 1)
+			this.position.y = tileToPixel(ty + 1)
 			this.velocity.y = 0; 
 			
 			cell = celldown;
