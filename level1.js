@@ -82,8 +82,35 @@ var LAYER_BACKGROUND = 0;
 var LAYER_PLATFORMS = 1;
 var LAYER_LADDERS = 2;
 
+var worldOffsetX = 0;
+
 function drawMap()
 {
+	var startX = -1;
+	
+	var maxTiles = Math.floor(SCREEN_WIDTH / TILE) + 2; 
+	
+	var tileX = pixelToTile(player.position.x);
+	
+	var offsetX = TILE + Math.floor(player.position.x % TILE);
+	
+	startX = tileX - Math.floor(maxTiles / 2);
+	
+	if (startX < -1)
+	{
+		startX = 0;
+		offsetX = 0;
+	}
+	
+	if (startX > Map.tw - maxTiles)
+	{
+		startX = Map.tw - mapTiles + 1;
+		offsetX = TILE;
+	}
+	
+	worldOffsetX = startX * TILE + offsetX; 
+
+
 	//loops through the layers
 	for(var layerIndex = 0; layerIndex < LAYER_COUNT; layerIndex++)
 	{
@@ -91,9 +118,13 @@ function drawMap()
 		
 		for (var y = 0; y < level1.layers[layerIndex].height; y++)
 		{
-			for (var x = 0; x < level1.layers[layerIndex].width; x++)
+			//CHANGES VVVVVV
+			itemIndex = y * level1.layers[layerIndex].width + startX; 
+			
+			for (var x = startX; x < startX + maxTiles; x++)
 			{
 				if (level1.layers[layerIndex].data[itemIndex] != 0)
+				//^^^^^^^^CHANGES
 				{
 					var tileIndex = level1.layers[layerIndex].data[itemIndex];
 					
@@ -102,10 +133,11 @@ function drawMap()
 							
 					var sy = TILESET_MARGIN + 
 							(Math.floor(tileIndex / TILESET_COUNT_Y)) * (TILESET_TILE + TILESET_SPACING);
-							
-					context.drawImage( tileset, sx, sy, 
-									   TILESET_TILE, TILESET_TILE, x * TILE, (y - 1) * TILE, 
-									   TILESET_TILE, TILESET_TILE);
+									   
+					context.drawImage(tileset, sx, sy,
+									 TILESET_TILE, TILESET_TILE,
+								  (x-startX) * TILE-offsetX, (y-1) * TILE, 
+							   TILESET_TILE, TILESET_TILE);				
 				}
 				itemIndex++;
 			}	
@@ -113,5 +145,3 @@ function drawMap()
 	}
 
 }
-
-
