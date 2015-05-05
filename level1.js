@@ -82,7 +82,7 @@ var LAYER_BACKGROUND = 0;
 var LAYER_PLATFORMS = 1;
 var LAYER_LADDERS = 2;
 
-var worldOffsetX = 0;
+var worldOffsetX = 3;
 
 function drawMap()
 {
