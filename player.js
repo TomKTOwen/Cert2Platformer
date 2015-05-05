@@ -1,5 +1,6 @@
 var LEFT = 0;
 var RIGHT = 1; 
+var JUMP = 2
 
 var ANIM_IDLE_LEFT 	    = 0; 
 var ANIM_JUMP_LEFT 	    = 1;
