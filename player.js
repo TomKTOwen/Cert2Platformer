@@ -1,10 +1,10 @@
-
 var LEFT = 0;
 var RIGHT = 1; 
 
 var ANIM_IDLE_LEFT 	    = 0; 
 var ANIM_JUMP_LEFT 	    = 1;
 var ANIM_WALK_LEFT 	    = 2;
+
 var ANIM_IDLE_RIGHT	    = 3;
 var ANIM_JUMP_RIGHT	    = 4;
 var ANIM_WALK_RIGHT	    = 5; 
@@ -45,23 +45,23 @@ var Player = function() {
 	
 	this.width = 159;
 	this.height = 163;
-
 	
 	this.velocity = new Vector2();
 	
 	this.falling = true;
 	this.jumping = false;
+	
 };
 
 Player.prototype.update = function(deltaTime)
 {
 	this.sprite.update(deltaTime)
 	
-	var left = false;
-	var right = false;
-	var jump = false;
+	var left	 = false;
+	var right 	 = false;
+	var jump     = false;
 	
-	//check keypress events
+	//check key press events
 	if(keyboard.isKeyDown(keyboard.KEY_LEFT) == true) 
 	{
 		left = true;
@@ -77,6 +77,18 @@ Player.prototype.update = function(deltaTime)
 		if(this.sprite.currentAnimation != ANIM_WALK_RIGHT && this.jumping == false && this.falling == false)
 			this.sprite.setAnimation(ANIM_WALK_RIGHT);
 	}
+	
+	if (keyboard.isKeyDown(keyboard.KEY_SPACE) == true)
+	{
+		jump = true;
+		this.direction = JUMP;
+		if(this.sprite.currentAnimation != ANIM_JUMP_LEFT && this.jumping == true && this.falling == true)
+			this.sprite.setAnimation(ANIM_JUMP_LEFT);
+		if(this.sprite.currentAnimation != ANIM_JUMP_RIGHT && this.jumping == true && this.falling == true)
+			this.sprite.setAnimation(ANIM_JUMP_RIGHT);	
+	}
+	
+	
 	else
 	{
 		if (this.jumping == false && this.falling == false)
@@ -95,20 +107,20 @@ Player.prototype.update = function(deltaTime)
 		}
 	}
 	
-	var wasLeft = this.velocity.x < 0; 
-	var wasRight = this.velocity.y > 0;
-	var falling = this.falling;
+	var wasLeft	 = this.velocity.x < 0; 
+	var wasRight = this.velocity.x > 0;
+	var falling	 = this.falling;
 	
-	var accelerationx = new Vector2();
+	var accelerationx = 0;
 	var accelerationy = GRAVITY;
 	
 	if (left)
-		accelerationx - ACCEL;
+		accelerationx = accelerationx - ACCEL;
 	else if (wasLeft) 
 		accelerationx = accelerationx + FRICTION;
 		
 	if (right)
-		accelerationx + ACCEL;
+		accelerationx = accelerationx + ACCEL;
 	else if (wasRight) 
 		accelerationx = accelerationx + FRICTION;
 
@@ -116,6 +128,10 @@ Player.prototype.update = function(deltaTime)
 	{
 		accelerationy = accelerationy - JUMP;
 		this.jumping = true;
+		if (this.direction == LEFT)
+			this.sprite.setAnimation(ANIM_JUMP_LEFT)
+		else
+			this.sprite.setAnimation(ANIM_JUMP_RIGHT)
 	}
 	
 	//add our current velocity
@@ -148,7 +164,7 @@ Player.prototype.update = function(deltaTime)
 	//check collision
 	if (this.velocity.y > 0)
 	{
-		//checks downward postion
+		//checks downward position
 		if ((celldown && !cell) || (celldiag && !cellright && nx))
 		{
 			this.position.y = tileToPixel(ty);
@@ -193,5 +209,5 @@ Player.prototype.update = function(deltaTime)
 
 Player.prototype.draw = function(context)
 {
-	this.sprite.draw(context, this.position.x, this.position.y);
+	this.sprite.draw(context, this.position.x - worldOffsetX, this.position.y);
 };
