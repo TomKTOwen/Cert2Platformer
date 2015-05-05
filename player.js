@@ -39,23 +39,18 @@ var Player = function() {
 	{
 		this.sprite.setAnimationOffset(i, -55, -87);
 	}
-	//this.image = document.createElement("img");
 	
 	this.position = new Vector2();
 	this.position.set(9 * TILE, 0 * TILE);
 	
 	this.width = 159;
 	this.height = 163;
-	
-	//this.offset = new Vector2();
-	//this.offset.set(-55, -87);
+
 	
 	this.velocity = new Vector2();
 	
 	this.falling = true;
 	this.jumping = false;
-	
-	//this.image.src = "hero.png";
 };
 
 Player.prototype.update = function(deltaTime)
@@ -99,9 +94,6 @@ Player.prototype.update = function(deltaTime)
 
 		}
 	}
-	//left = (keyboard.isKeyDown(keyboard.KEY_LEFT));
-	//right = (keyboard.isKeyDown(keyboard.RIGHT));
-	//jump = (keyboard.isKeyDown(keyboard.SPACE));
 	
 	var wasLeft = this.velocity.x < 0; 
 	var wasRight = this.velocity.y > 0;
@@ -202,11 +194,4 @@ Player.prototype.update = function(deltaTime)
 Player.prototype.draw = function(context)
 {
 	this.sprite.draw(context, this.position.x, this.position.y);
-	
-	//context.save();
-	//	context.translate(this.position.x, this.position.y);
-	//	context.rotate(this.rotation);
-	//	context.drawImage(this.image, -this.width/2, -this.height/2);
-	//context.restore();
-	
 };
