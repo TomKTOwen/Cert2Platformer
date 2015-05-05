@@ -7,8 +7,7 @@ var endFrameMillis = Date.now();
 
 var STATE_GAME = 0;
 var STATE_GAMEOVER = 1;
-//var STATE_WIN = 3; /////////////////not sure how to add this is after crossing exit on map
-var STATE_SPLASH = 4;
+var STATE_SPLASH = 2;
 
 var gameState = STATE_SPLASH;
 
@@ -24,6 +23,9 @@ Music.play();
 var SplashBackground = document.createElement("img");
 	SplashBackground.src = "splash_background.png";
 
+var heartImage = document.createElement("img");
+	heartImage.src = "heart.png";
+	
 // This function will return the time in seconds since the function 
 // was last called
 // You should only call this function once per frame
@@ -59,6 +61,21 @@ var SCREEN_HEIGHT = canvas.height;
 var fps = 0;
 var fpsCount = 0;
 var fpsTime = 0;
+
+ // abitrary choice for 1m
+var METER = TILE;
+ // very exaggerated gravity (6x)
+var GRAVITY = METER * 9.8 * 6;
+ // max horizontal speed (10 tiles per second)
+var MAXDX = METER * 10;
+ // max vertical speed (15 tiles per second)
+var MAXDY = METER * 15;
+ // horizontal acceleration - take 1/2 second to reach maxdx
+var ACCEL = MAXDX * 2;
+ // horizontal friction - take 1/6 second to stop from maxdx
+var FRICTION = MAXDX * 6;
+ // (a large) instantaneous jump impulse
+var JUMP = METER * 1500;
 
 var cells = [];
 
@@ -110,6 +127,14 @@ function pixelToTile(pixel)
 	return Math.floor(pixel / TILE);
 }
 
+function bound(value, min, max)
+{
+	if (value < min)
+		return min;
+	if (value > max)
+		return max; 
+	return value;
+}
 
 function cellAtTileCoord(layer, tx, ty)
 {
@@ -141,18 +166,31 @@ function cellAtPixelCoord(layer, x, y)
 var keyboard = new Keyboard();
 var player = new Player();
 
+//adding score and lives!!
+var score = 0;
+var lives = 3
+
 function runGame(deltaTime)
-{
+{	
 	
-	context.fillStyle = "#8ebbeb";		
+	context.fillStyle = "#8EBBEB";		
 	context.fillRect(0, 0, canvas.width, canvas.height);
-	
 	
 	drawMap();
 	
-	player.update(deltaTime);
-	player.draw();
+	context.fillStyle = "DAE90D";
+	context.font = "32px Arial"
+	var scoreText = "SCORE: " + score;
+	context.fillText = (scoreText, SCREEN_WIDTH - 170, 35);
 	
+	for (var i = 0; i < lives; i++)
+	{
+		context.drawImage (heartImage, 20 + ((heartImage.width + 2) * i), 10); 
+	}
+	
+	player.update(deltaTime);
+	player.draw(context);
+
 	// update the frame counter 
 	fpsTime += deltaTime;
 	fpsCount++;
@@ -163,14 +201,14 @@ function runGame(deltaTime)
 		fpsCount = 0;
 	}		
 		
-	// draw the FPS
-	context.fillStyle = "#f00";
-	context.font="14px Arial";
-	context.fillText("FPS: " + fps, 5, 20, 100);
+	//// draw the FPS
+	//context.fillStyle = "#f00";
+	//context.font="14px Arial";
+	//context.fillText("FPS: " + fps, 5, 20, 100);
 	
 	
 	
-	if (Player.deathCount == 2)
+	if (Player.lives == 0)
 	{
 		gameState = STATE_GAMEOVER;
 		return;
@@ -190,9 +228,9 @@ function runGameOver(deltaTime)
 	context.fillStyle = "#000";		
 	context.fillRect(0, 0, canvas.width, canvas.height);
 	
-	context.fillStyle = "#f00";
+	context.fillStyle = "#F00";
 	context.font="100px Arial";
-	context.fillText("...You failed...", 300, 400);
+	context.fillText("MWAHAHAHA", 300, 400);
 	
 }
 
@@ -200,12 +238,12 @@ function runWin(deltaTime)
 {
 	Music.stop();
 	
-	context.fillStyle = "#8ebbeb"
+	context.fillStyle = "#8EBBEB"
 	context.fillRect(0,0, canvas.width, canvas.height);
 	
-	context.fillStyle = "#66ba5a";
+	context.fillStyle = "#66BA5A";
 	context.font="100px Arial";
-	context.fillText("Success", 300, 400);
+	context.fillText("YOU WIN!!!!", 300, 400);
 }
 
 var splashTimer = 3;
