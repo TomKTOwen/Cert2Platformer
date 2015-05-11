@@ -34,8 +34,3 @@ Keyboard.prototype.isKeyDown = function(keyCode)
 {
 	return this.keys[keyCode];
 };
-
-Array.prototype.GetLength = function()
-{
-	return this.length;
-}
