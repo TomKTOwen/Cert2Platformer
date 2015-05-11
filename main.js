@@ -174,7 +174,6 @@ function runGame(deltaTime)
 	//background for in game
 	context.fillStyle = "#78A0CA";		
 	context.fillRect(0, 0, canvas.width, canvas.height);
-	context.fillStyle = "#f00";
 	context.font="14px Arial";
 	context.fillText(LIVES, 5, 100, 100);
 	drawMap();
