@@ -1,15 +1,58 @@
 var canvas = document.getElementById("gameCanvas");
 var context = canvas.getContext("2d");
-
-//setting up delta time variables
 var startFrameMillis = Date.now();
 var endFrameMillis = Date.now();
 
-var STATE_GAME = 0;
-var STATE_GAMEOVER = 1;
-var STATE_SPLASH = 2;
+function getDeltaTime()
+{
+	endFrameMillis = startFrameMillis;
+	startFrameMillis = Date.now();
 
-var gameState = STATE_SPLASH;
+	var deltaTime = (startFrameMillis - endFrameMillis) * 0.001;
+	
+	if(deltaTime > 0.03)
+		deltaTime = 0.03;
+		
+	return deltaTime;
+}
+//-------------------- Don't modify anything above here
+
+var SCREEN_WIDTH = canvas.width;
+var SCREEN_HEIGHT = canvas.height;
+
+var fps = 0;
+var fpsCount = 0;
+var fpsTime = 0;
+
+var splashTimer 	= 100;
+var winTimer 		= 100;
+var loseTimer 		= 100;
+var STATE_SPLASH 	= 0;
+var STATE_GAME 		= 1;
+var STATE_END 		= 2;
+var STATE_WIN 		= 3;
+var GAME_STATE 		= STATESPLASH;
+
+var METER = TILE;
+var GRAVITY = METER * 9.8 * 6;
+var MAXDX = METER * 10;
+var MAXDY = METER * 15;
+var ACCEL = MAXDX * 2;
+var BACCEL = MAXDX * -2;
+var FRICTION = MAXDX * 6;
+var JUMP = METER * -1500;
+var LIVES = 3;
+var land = true;
+
+var SplashBackground = document.createElement("img");
+	SplashBackground.src = "splash_background.png";
+
+var Heart = document.createElement("img");
+	Heart.src = "heart.png";
+
+
+var keyboard = new Keyboard();
+var player = new Player();
 
 var Music = new Howl(
 	{
@@ -19,63 +62,6 @@ var Music = new Howl(
 		volume:0.5
 	});
 Music.play();
-
-var SplashBackground = document.createElement("img");
-	SplashBackground.src = "splash_background.png";
-
-var heartImage = document.createElement("img");
-	heartImage.src = "heart.png";
-	
-// This function will return the time in seconds since the function 
-// was last called
-// You should only call this function once per frame
-function getDeltaTime()
-{
-	endFrameMillis = startFrameMillis;
-	startFrameMillis = Date.now();
-
-		// Find the delta time (dt) - the change in time since the last drawFrame
-		// We need to modify the delta time to something we can use.
-		// We want 1 to represent 1 second, so if the delta is in milliseconds
-		// we divide it by 1000 (or multiply by 0.001). This will make our 
-		// animations appear at the right speed, though we may need to use
-		// some large values to get objects movement and rotation correct
-	var deltaTime = (startFrameMillis - endFrameMillis) * 0.001;
-	
-		// validate that the delta is within range
-	if(deltaTime > 0.03)
-		deltaTime = 0.03;
-		
-	return deltaTime;
-}
-
-//-------------------- Don't modify anything above here
-
-var SCREEN_WIDTH = canvas.width;
-var SCREEN_HEIGHT = canvas.height;
-
-
-// some variables to calculate the Frames Per Second (FPS - this tells use
-// how fast our game is running, and allows us to make the game run at a 
-// constant speed)
-var fps = 0;
-var fpsCount = 0;
-var fpsTime = 0;
-
- // abitrary choice for 1m
-var METER = TILE;
- // very exaggerated gravity (6x)
-var GRAVITY = METER * 9.8 * 6;
- // max horizontal speed (10 tiles per second)
-var MAXDX = METER * 10;
- // max vertical speed (15 tiles per second)
-var MAXDY = METER * 15;
- // horizontal acceleration - take 1/2 second to reach maxdx
-var ACCEL = MAXDX * 2;
- // horizontal friction - take 1/6 second to stop from maxdx
-var FRICTION = MAXDX * 6;
- // (a large) instantaneous jump impulse
-var JUMP = METER * 1500;
 
 var cells = [];
 
@@ -117,25 +103,6 @@ function initializeCollision()
 	}
 }
 
-function tileToPixel(tile_coord)
-{
-	return tile_coord * TILE;
-}
-
-function pixelToTile(pixel)
-{
-	return Math.floor(pixel / TILE);
-}
-
-function bound(value, min, max)
-{
-	if (value < min)
-		return min;
-	if (value > max)
-		return max; 
-	return value;
-}
-
 function cellAtTileCoord(layer, tx, ty)
 {
 	//if off the top, left or right of the map
@@ -153,6 +120,17 @@ function cellAtTileCoord(layer, tx, ty)
 	return cells[layer][ty][tx];
 }
 
+function tileToPixel(tile)
+{
+	return tile * TILE;
+};
+
+function pixelToTile(pixel)
+{
+	return Math.floor(pixel / TILE);
+};
+
+
 function cellAtPixelCoord(layer, x, y)
 {
 	var tx = pixelToTile(x);
@@ -161,37 +139,137 @@ function cellAtPixelCoord(layer, x, y)
 	return cellAtTileCoord(layer, tx, ty);
 }
 
+function bound(value, min, max)
+{
+	if (value < min)
+		return min;
+	if (value > max)
+		return max;
+		
+	return value;
+};
 
 
-var keyboard = new Keyboard();
-var player = new Player();
 
-//adding score and lives!!
-var score = 0;
-var lives = 3
-
-function runGame(deltaTime)
-{	
-	
-	context.fillStyle = "#8EBBEB";		
-	context.fillRect(0, 0, canvas.width, canvas.height);
-	
-	drawMap();
-	
-	context.fillStyle = "DAE90D";
-	context.font = "32px Arial"
-	var scoreText = "SCORE: " + score;
-	context.fillText = (scoreText, SCREEN_WIDTH - 170, 35);
-	
-	for (var i = 0; i < lives; i++)
+function runSplash(deltaTime)
+{
+	if (splashTimer > 0)
 	{
-		context.drawImage (heartImage, 20 + ((heartImage.width + 2) * i), 10); 
+		splashTimer --
+	}	
+	
+	if ( splashTimer == 0) 
+	{
+		GAMESTATE = STATEGAME
 	}
 	
+	context.fillStyle = "#AAE31A"
+	context.fillRect(0,0, canvas.width, canvas.height);
+	context.drawImage( SplashBackground, 0, 0);
+	
+}
+
+function runGame(deltaTime)
+{
+	//background for in game
+	context.fillStyle = "#78A0CA";		
+	context.fillRect(0, 0, canvas.width, canvas.height);
+	context.fillStyle = "#f00";
+	context.font="14px Arial";
+	context.fillText(LIVES, 5, 100, 100);
+	drawMap();
 	player.update(deltaTime);
 	player.draw(context);
+	winTimer = 100;
+	loseTimer = 100;
+	
+	context.draw = Heart;
+	
+	
+	if (LIVES == 3)
+	{
+		context.drawImage(Heart, 120, 25)
+		context.drawImage(Heart, 130, 25)
+		context.drawImage(Heart, 140, 25)
+	};
+	
+	if (LIVES == 2)
+	{
+		context.drawImage(Heart, 130, 25)
+		context.drawImage(Heart, 120, 25)
+	};                    
+	                      
+	if (LIVES == 1)       
+	{                     
+		context.drawImage(Heart, 120, 25)
+	};
+	
+	if (player.position.x >= 2044 && player.position.y >= 420)
+	{
+		GAME_STATE = STATE_WIN
+	}
+	
+	if (player.position.y > 600 || player.position.x < 0)
+	{
+		player.position.y = 7 * TILE;
+		player.position.x = 11 * TILE;
+		LIVES --;
+		player.Sprite.setAnimation(ANIM_IDLE_LEFT);
+	};
+	
+	if (LIVES == 0)
+	{
+		GAME_STATE = STATE_END
+	};
+};
+	
 
-	// update the frame counter 
+
+function runGameOver(deltaTime)
+{
+	context.fillStyle = "#000";
+	context.font = "40px Arial";
+	context.fillText( "MWAHAHAHAHAHA TRY AGAIN", SCREEN_HEIGHT/2, SCREEN_WIDTH/3);
+	
+	if (loseTimer > 0)
+	{
+		loseTimer --
+	}	
+	
+	if ( loseTimer == 0) 
+	{
+		GAMESTATE = STATEGAME;
+		LIVES = 3;
+	}
+};
+	
+}
+
+function runWin(deltaTime)
+{
+	context.fillStyle = "#000";
+	context.font = "40px Arial";
+	context.fillText( "CONGRATULATIONS!!! YOU WIN", SCREEN_HEIGHT/2, SCREEN_WIDTH/3);
+	
+	if (winTimer > 0)
+	{
+		winTimer --
+	}	
+	
+	if ( winTimer == 0) 
+	{
+		GAMESTATE = STATEGAME;
+		LIVES = 3;
+		player.position.y = 7 * TILE;
+		player.position.x = 11 * TILE;
+		player.Sprite.setAnimation(ANIM_IDLE_LEFT);
+	}
+}
+
+function run()
+{	
+	var deltaTime = getDeltaTime();
+	
 	fpsTime += deltaTime;
 	fpsCount++;
 	if(fpsTime >= 1)
@@ -199,91 +277,38 @@ function runGame(deltaTime)
 		fpsTime -= 1;
 		fps = fpsCount;
 		fpsCount = 0;
-	}		
+	}			
+	//GAMESTATES
+	
+
+	switch(GAMESTATE)
+	{
+		case STATESPLASH:
+			RUNSPLASHSCREEN(deltaTime);
+		break;
+		 
+		case STATEGAME:
+			RUNGAMESCREEN(deltaTime);
+		break;
 		
-	//// draw the FPS
-	//context.fillStyle = "#f00";
-	//context.font="14px Arial";
-	//context.fillText("FPS: " + fps, 5, 20, 100);
-	
-	
-	
-	if (Player.lives == 0)
-	{
-		gameState = STATE_GAMEOVER;
-		return;
-	}
-	
-	if (Player.health == 3)
-	{
-		gameState = STATE_GAMEOVER;
-		return;
-	}
-}
+		case STATEEND:
+			RUNGAMEOVER(deltaTime);
+		break;
+		
+		case STATEWIN:
+			RUNGAMEWIN(deltaTime);
+		break;
+	};
 
-function runGameOver(deltaTime)
-{
-	Music.stop();
-	
-	context.fillStyle = "#000";		
-	context.fillRect(0, 0, canvas.width, canvas.height);
-	
-	context.fillStyle = "#F00";
-	context.font="100px Arial";
-	context.fillText("MWAHAHAHA", 300, 400);
-	
-}
-
-function runWin(deltaTime)
-{
-	Music.stop();
-	
-	context.fillStyle = "#8EBBEB"
-	context.fillRect(0,0, canvas.width, canvas.height);
-	
-	context.fillStyle = "#66BA5A";
-	context.font="100px Arial";
-	context.fillText("YOU WIN!!!!", 300, 400);
-}
-
-var splashTimer = 3;
-function runSplash(deltaTime)
-{
-		splashTimer -= deltaTime;
-	if(splashTimer <= 0)
-	{
-		gameState = STATE_GAME;
-		return;
-	}
-	
-	context.fillStyle = "#AAE31A"
-	context.fillRect(0,0, canvas.width, canvas.height);
-	context.drawImage( SplashBackground, 0, 0);
-	
-	}
-
-
-
-function run()
-{
-	
-	var deltaTime = getDeltaTime();
-	
-	switch(gameState)
-	{
-		case STATE_GAME:
-			runGame(deltaTime);
-			break;
-		case STATE_GAMEOVER:
-			runGameOver(deltaTime);
-			break;
-		case STATE_SPLASH:
-			runSplash(deltaTime);
-	}
-}
-
-
-initializeCollision();
+	// draw the FPS
+	context.fillStyle = "#f00";
+	context.font="14px Arial";
+	context.fillText("FPS: " + fps, 5, 20, 100);
+	context.fillText("x " + player.position.x + " y " + player.position.y, 5, 40, 100);
+	context.fillText(splashTimer +" "+ winTimer +" "+ loseTimer, 5, 60, 100);
+	context.fillText(GAMESTATE, 5, 80, 100);
+	context.fillText(KEYPRESS, 5, 120, 100);
+};
 
 //-------------------- Don't modify anything below here
 
