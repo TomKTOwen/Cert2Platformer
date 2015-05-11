@@ -1,19 +1,23 @@
-
 //constructor
-var Vector2 = function () 
+var Vector2 = function()
 {
-	this.x = 0;	
-	this.y = 0;
+		this.x = 0;
+		this.y = 0;
+};
+				
+Vector2.prototype.set = function(x,y)
+{
+		this.x = y;
+		this.y = y;
 };
 
-Vector2.prototype.set = function(x, y)
+Vector2.prototype.MAGNITUDE = function (x,y)
 {
-	this.x = x;
-	this.y = y;
+	var Magnitude = Math.sqrt(x + y);
+	
 };
 
-//implement this...
-Vector2.prototype.magnitude;
-Vector2.prototype.normalize;
-
-//research and implement this...
+Vector2.prototype.NORMALIZE = function(x,y)
+{
+	
+};
